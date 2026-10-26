@@ -26,3 +26,13 @@ PyTorch/Colab, nothing stylistic. Each entry: file, line, what changed, why.
   checkpoint and reported numbers — not the paper's prose description.
 - `F.tanh` in `model.py` is deprecated but was left untouched since it still runs;
   will revisit only if it errors on the Colab PyTorch version actually encountered.
+
+## Data notes
+
+- The training-data zip linked from `README.md` (Google Drive id
+  `1GAB3uGsmAyLgtDBDONbil08vVu5wJcG3`) contains **2,002** flat `.jpg` images in
+  its root, not the 2,422 the paper's §5.1 text describes for the Part1 training
+  split. This is the authors' own officially released training package, used
+  as-is (no re-derivation from raw SICE Part1), so the reported discrepancy is
+  between the paper's prose and the authors' own released data, not something
+  introduced by this reproduction.
