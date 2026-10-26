@@ -27,6 +27,20 @@ PyTorch/Colab, nothing stylistic. Each entry: file, line, what changed, why.
 - `F.tanh` in `model.py` is deprecated but was left untouched since it still runs;
   will revisit only if it errors on the Colab PyTorch version actually encountered.
 
+## 2026-10-26 — resume-from-checkpoint support
+
+- **`lowlight_train.py`, argparse block**: added `--start_epoch` (default `0`).
+- **`lowlight_train.py`, training loop**: `for epoch in range(config.num_epochs):`
+  → `for epoch in range(config.start_epoch, config.num_epochs):`.
+  Why: `--load_pretrain`/`--pretrain_dir` already existed as CLI args to resume
+  *weights* from a checkpoint, but the loop always counted epochs from 0
+  regardless, so resuming after a Colab disconnect would silently train past
+  the intended 200 total epochs. This two-line change lets the orchestrating
+  notebook pass the correct `start_epoch` (detected from the highest
+  `Epoch{N}.pth` already saved to Drive) so total epochs trained across any
+  number of resumptions still sums to `num_epochs`. No change to the loss
+  functions, optimizer, or default hyperparameters.
+
 ## Data notes
 
 - The training-data zip linked from `README.md` (Google Drive id
