@@ -50,3 +50,50 @@ PyTorch/Colab, nothing stylistic. Each entry: file, line, what changed, why.
   as-is (no re-derivation from raw SICE Part1), so the reported discrepancy is
   between the paper's prose and the authors' own released data, not something
   introduced by this reproduction.
+
+- **Sign convention: code vs. paper's Eq. 1.** The paper's prose gives the
+  LE-curve as `LE(x) = x + α·x·(1-x)`. The released `model.py` actually computes
+  `x + r·(x²-x)`, which is the algebraic *negative* of that (`x²-x = -x(1-x)`).
+  Found while implementing `L_noise` below (a sanity check against a synthetic
+  dark pixel showed positive `r` *darkens* rather than brightens). This doesn't
+  affect reproduction fidelity — the released network was trained end-to-end
+  against its own formula and learns the correspondingly negative `r` values in
+  dark regions — but it matters for any new code (like `L_noise`) that needs to
+  replicate the curve's actual math rather than the paper's prose description.
+
+## 2026-10-27 — noise-gain regularizer (contribution phase, opt-in via `--W_noise`)
+
+Added a training-time loss term to penalize the curve iterations for amplifying
+noise in flat/low-texture regions, motivated by diagnostic tests run on the
+Tier-1 reproduction model (see the "Zero-DCE Failure-Mode Diagnostics" doc):
+noise amplification in flat patches correlated strongly with curve magnitude
+(Pearson r=0.877) and accelerated across the 8 iterations.
+
+- **`Myloss.py`**: new `L_noise` class. Uses the curve's own analytic local
+  gain `g_n(x) = 1 + A_n·(2x_{n-1}-1)` (the derivative of `model.py`'s actual
+  recurrence, bounded in `[0,2]`, consistent with the sign-convention note
+  above) as the noise-amplification estimate at each iteration, by standard
+  first-order noise-propagation through a pointwise nonlinearity. Penalizes
+  `ReLU(g_n - 1)²` (only amplification, not attenuation), weighted by (a) an
+  iteration index `n/8` (increasing — matches the measured accelerating noise
+  growth) and (b) a flatness mask computed once from the original input image
+  (Sobel gradient magnitude, `exp(-20·|∇|)`, detached from the graph) so the
+  penalty targets flat regions and leaves `L_spa`'s edge-contrast objective
+  alone. Recomputes the 8-iteration recurrence internally from `x` and `r`
+  rather than modifying `model.py`'s return signature, to keep `model.py` and
+  `lowlight_test.py` completely untouched.
+- **`lowlight_train.py`**: added `--W_noise` (float, **default `0.0`**) and
+  `loss_noise = config.W_noise*L_noise(img_lowlight, A)`, added into the total
+  loss. Default `0.0` means the baseline Tier-1 reproduction config is
+  bit-for-bit unchanged unless `--W_noise` is explicitly passed for a
+  contribution run.
+- Verified locally (CPU, synthetic tensors, no GPU needed) before pushing:
+  loss is differentiable w.r.t. the curve parameters; a flat near-black region
+  under a strongly brightening curve is penalized far more than a textured
+  region under the same curve; a curve that darkens (gain<1) is correctly
+  unpenalized; penalty scales with curve magnitude. One bug caught and fixed
+  during this check: an early version of `flat_weight` normalized gradient
+  magnitude relative to each image's own max gradient, which inverted the
+  intended behavior on perfectly uniform synthetic inputs (the epsilon-floor
+  gradient got normalized up to ~1 instead of ~0); replaced with an absolute,
+  non-per-image-normalized scale.

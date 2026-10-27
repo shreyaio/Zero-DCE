@@ -155,3 +155,34 @@ class perception_loss(nn.Module):
         h_relu_4_3 = h
         # out = (h_relu_1_2, h_relu_2_2, h_relu_3_3, h_relu_4_3)
         return h_relu_4_3
+
+
+class L_noise(nn.Module):
+
+    def __init__(self):
+        super(L_noise, self).__init__()
+        kernel_x = torch.FloatTensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]).unsqueeze(0).unsqueeze(0)
+        kernel_y = torch.FloatTensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]]).unsqueeze(0).unsqueeze(0)
+        self.weight_x = nn.Parameter(data=kernel_x, requires_grad=False)
+        self.weight_y = nn.Parameter(data=kernel_y, requires_grad=False)
+
+    def flat_weight(self, x):
+        gray = torch.mean(x, dim=1, keepdim=True)
+        gx = F.conv2d(gray, self.weight_x, padding=1)
+        gy = F.conv2d(gray, self.weight_y, padding=1)
+        grad_mag = torch.sqrt(gx ** 2 + gy ** 2 + 1e-12)
+        return torch.exp(-20.0 * grad_mag)
+
+    def forward(self, x, r):
+        r_iters = torch.split(r, 3, dim=1)
+        n_iters = len(r_iters)
+        fw = self.flat_weight(x).detach()
+        x_prev = x
+        loss = 0.0
+        for n, A_n in enumerate(r_iters, start=1):
+            gain = 1 + A_n * (2 * x_prev - 1)
+            excess = F.relu(gain - 1.0)
+            w_n = n / n_iters
+            loss = loss + w_n * torch.mean((excess ** 2) * fw)
+            x_prev = x_prev + A_n * (torch.pow(x_prev, 2) - x_prev)
+        return loss / n_iters

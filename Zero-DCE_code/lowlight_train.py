@@ -46,6 +46,7 @@ def train(config):
 
 	L_exp = Myloss.L_exp(16,0.6)
 	L_TV = Myloss.L_TV()
+	L_noise = Myloss.L_noise()
 
 
 	optimizer = torch.optim.Adam(DCE_net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
@@ -66,10 +67,11 @@ def train(config):
 			loss_col = 5*torch.mean(L_color(enhanced_image))
 
 			loss_exp = 10*torch.mean(L_exp(enhanced_image))
-			
-			
+
+			loss_noise = config.W_noise*L_noise(img_lowlight, A)
+
 			# best_loss
-			loss =  Loss_TV + loss_spa + loss_col + loss_exp
+			loss =  Loss_TV + loss_spa + loss_col + loss_exp + loss_noise
 			#
 
 			
@@ -96,6 +98,7 @@ if __name__ == "__main__":
 	parser.add_argument('--lr', type=float, default=0.0001)
 	parser.add_argument('--weight_decay', type=float, default=0.0001)
 	parser.add_argument('--grad_clip_norm', type=float, default=0.1)
+	parser.add_argument('--W_noise', type=float, default=0.0)
 	parser.add_argument('--num_epochs', type=int, default=200)
 	parser.add_argument('--start_epoch', type=int, default=0)
 	parser.add_argument('--train_batch_size', type=int, default=8)
