@@ -161,8 +161,8 @@ class L_noise(nn.Module):
 
     def __init__(self):
         super(L_noise, self).__init__()
-        kernel_x = torch.FloatTensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]).unsqueeze(0).unsqueeze(0)
-        kernel_y = torch.FloatTensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]]).unsqueeze(0).unsqueeze(0)
+        kernel_x = torch.FloatTensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]).cuda().unsqueeze(0).unsqueeze(0)
+        kernel_y = torch.FloatTensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]]).cuda().unsqueeze(0).unsqueeze(0)
         self.weight_x = nn.Parameter(data=kernel_x, requires_grad=False)
         self.weight_y = nn.Parameter(data=kernel_y, requires_grad=False)
 

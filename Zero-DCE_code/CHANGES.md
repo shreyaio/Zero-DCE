@@ -97,3 +97,13 @@ noise amplification in flat patches correlated strongly with curve magnitude
   intended behavior on perfectly uniform synthetic inputs (the epsilon-floor
   gradient got normalized up to ~1 instead of ~0); replaced with an absolute,
   non-per-image-normalized scale.
+- **Follow-up fix (same day, caught on first real Colab run):** `L_noise`'s
+  Sobel kernels were built with plain `torch.FloatTensor(...)`, leaving them on
+  CPU while every other tensor in training is on CUDA — `RuntimeError: Input
+  type (torch.cuda.FloatTensor) and weight type (torch.FloatTensor) should be
+  the same`. `L_spa`'s existing kernels in this same file hardcode `.cuda()`
+  into the tensor construction for the same reason (the training loop never
+  calls `.cuda()` on the loss modules themselves, only on tensors) — matched
+  that established pattern rather than introducing a different one. This was
+  missed by the earlier local CPU-only sanity check (no GPU in that
+  environment), which is why it only surfaced on the first real Colab run.
