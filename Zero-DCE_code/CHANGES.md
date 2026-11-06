@@ -107,3 +107,45 @@ noise amplification in flat patches correlated strongly with curve magnitude
   that established pattern rather than introducing a different one. This was
   missed by the earlier local CPU-only sanity check (no GPU in that
   environment), which is why it only surfaced on the first real Colab run.
+
+## 2026-11-06 — fix: flatness mask was too broad, causing global dimming
+
+A `W_noise` sweep (0.1 to 2.0, then corrected to 20-400 after a loss-scale
+diagnostic showed the first range was ~100x too small to have any effect)
+showed the mechanism working as designed on its target metrics — amplification
+ratio and BRISQUE both improved monotonically with weight — but LOL PSNR/SSIM/MAE
+collapsed in step (PSNR 17.26 -> 9.21, MAE 32.91 -> 86.57 from baseline to
+W_noise=400). A visual side-by-side across weights showed mean image brightness
+dropping steadily and substantially at every tested weight, across the whole
+frame, not just in flat/noisy patches — the network was satisfying the penalty
+by brightening less everywhere rather than selectively protecting noisy flat
+regions while still brightening textured ones.
+
+Root cause, confirmed by measuring `flat_weight` directly on real bundled test
+images (`data/test_data/DICM/01.jpg` and others) rather than reasoning about
+it: on the *raw, pre-enhancement* input, a genuinely dark photo has
+near-zero local contrast almost everywhere, including in regions that would
+reveal real structure once properly brightened — darkness compresses local
+gradients regardless of whether real detail is present. Measured: 61.5% of
+`01.jpg`'s pixels scored `flat_weight > 0.5` ("meaningfully protected") under
+the original formula, and 81.7% for `18.jpg` — the mask was flagging most of
+the dark frame as "protect this," not just the truly flat/noisy parts of it.
+
+- **`Myloss.py`, `L_noise.flat_weight`**: gradient magnitude is now computed
+  on a gamma-lifted version of the grayscale input (`gray ** 0.4`) instead of
+  the raw grayscale values, and the exponential scale was retuned from `-20.0`
+  to `-6.0` to match the now-larger gradient magnitudes after the lift. The
+  gamma lift reveals structure that darkness was hiding from the raw-pixel
+  gradient computation, without using any per-image adaptive normalization
+  (an earlier candidate fix using per-image min-max stretching was tried and
+  rejected: it's numerically unstable on near-constant patches, where a tiny
+  max-min denominator blows up residual sensor noise into looking like real
+  structure — the opposite of the intended effect, confirmed by a synthetic
+  test before rejecting it).
+- Verified on the same three real images used for the visual check: protected
+  fraction (`flat_weight > 0.5`) drops from 61.5%->30.9% on `01.jpg` and
+  81.7%->21.2% on `18.jpg`, but *rises* 60.3%->74.1% on `1.bmp` (a scene with
+  large genuine sky regions) — confirming the mask now differentiates by
+  actual image content rather than reacting to "the image is dark" uniformly.
+- Not yet re-validated end-to-end with a retrained model at this point in the
+  log; see the next entry (or the diagnostics doc) for the W50 rerun result.

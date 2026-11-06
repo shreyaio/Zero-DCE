@@ -168,10 +168,11 @@ class L_noise(nn.Module):
 
     def flat_weight(self, x):
         gray = torch.mean(x, dim=1, keepdim=True)
-        gx = F.conv2d(gray, self.weight_x, padding=1)
-        gy = F.conv2d(gray, self.weight_y, padding=1)
+        lifted = torch.clamp(gray, min=0) ** 0.4
+        gx = F.conv2d(lifted, self.weight_x, padding=1)
+        gy = F.conv2d(lifted, self.weight_y, padding=1)
         grad_mag = torch.sqrt(gx ** 2 + gy ** 2 + 1e-12)
-        return torch.exp(-20.0 * grad_mag)
+        return torch.exp(-6.0 * grad_mag)
 
     def forward(self, x, r):
         r_iters = torch.split(r, 3, dim=1)
