@@ -4,7 +4,11 @@ Research project investigating how perturbations propagate through Zero-DCE's ei
 iterative curve transformations, and whether amplification can be controlled at
 training time without changing the inference architecture.
 
-**Read `notebooks/README.md` before proposing any code.**
+**Before proposing any code:** read `docs/handoffs/` (newest first — it is
+self-contained and explains the whole project) and `notebooks/README.md`.
+
+**Before designing any regulariser:** read `docs/the-pointwise-limit.md`. It explains
+why the obvious approach cannot work.
 
 ---
 
@@ -23,6 +27,11 @@ The user prefers a staged workflow:
 
 | Path | Contents |
 |---|---|
+| `docs/` | Documentation. Start at `docs/README.md`. |
+| `docs/handoffs/` | Dated session records. Newest = current state. |
+| `docs/phase-a-results.md` | Every Phase A number, exact |
+| `docs/the-pointwise-limit.md` | The core theoretical result |
+| `docs/related-work.md` | ZLEN analysis and literature still to check |
 | `Zero-DCE_code/` | Original Zero-DCE source. `Myloss.py` holds the earlier `L_noise` attempt. |
 | `notebooks/01_zerodce_reproduction.ipynb` | Baseline reproduction and recorded metrics |
 | `notebooks/02_phase_a_diagnostics.ipynb` | Phase A, Experiments 0–4 + validation |
@@ -34,8 +43,11 @@ The user prefers a staged workflow:
 All notebooks pull `master`. The old work branches `claude/nifty-ritchie-qpqakn` and
 `claude/clever-gauss-thkwoj` were merged in and are now historical; do not develop on them.
 
-`HANDOFF.md` is a dated record from the Phase A session (11 Nov) and still refers to the
-old branch. Treat it as history — **this file is authoritative.**
+**Documentation.** `docs/handoffs/2026-11-26-phase-b-design.md` is the current
+handoff and describes the whole project from scratch. The earlier
+`docs/handoffs/2026-11-11-phase-a.md` is historical: its measurements stand, but its
+proposed next step (a `g²`/`J²` regulariser) was later shown unable to work, and it
+refers to the pre-merge branch. This file is the condensed authority; `docs/` is the long form.
 
 ---
 
@@ -92,7 +104,8 @@ of quality degradation.
 
 - **Do not build a regulariser that penalises `g²` or `J²`.** `g` is the contrast gain,
   so the model satisfies the penalty by dimming the image. Measured: PSNR 17.26 → 14.74
-  at W50, → 9.21 at W400. That was not a mask bug; the objective pointed at the wrong quantity.
+  at W50, → 9.21 at W400. That was not a mask bug; the objective pointed at the wrong
+  quantity. Full argument: `docs/the-pointwise-limit.md`.
 - **Do not reuse `W50` or any weight from the old sweeps.**
 - **Do not use Sobel gradient magnitude as a flatness mask.** It is large for edges *and*
   noise. Use structure-tensor coherence.
@@ -158,6 +171,17 @@ Rules that prevent a repeat:
 `BASE_SEED = 42026` is **reconstructed, not recovered**. It only selects noise draws,
 so Experiments 2 and 3 reproduce statistically, not bit-for-bit. If an
 `experiment_*_metadata.json` on Drive records the real seed, substitute it.
+
+---
+
+## Current status and next action
+
+Phase A is complete and reinterpreted. Phase B is designed but **not yet run**.
+
+**Next action:** run the SESSION START cell of `notebooks/03_phase_b_experiments.ipynb`
+in a fresh Colab runtime; it must print `PHASE B READY`. Then Experiment 5.0, which is a
+hard gate — `gamma = 1` must reproduce vanilla Zero-DCE to about `1e-7`. Experiments
+5.1–5.3 are meaningless until it passes. Details in the current handoff.
 
 ---
 
