@@ -29,8 +29,13 @@ The user prefers a staged workflow:
 | `notebooks/03_phase_b_experiments.ipynb` | Phase B, not yet run |
 | `notebooks/99_archive_superseded.ipynb` | Abandoned work. Record only — do not reuse. |
 
-**Branches.** `claude/nifty-ritchie-qpqakn` holds the Phase A code and `L_noise`
-(commit `00ab05e`). The notebooks pull that branch. `master` does **not** have `L_noise`.
+**Branches.** Everything lives on **`master`** — the Phase A source changes
+(`L_noise`, `--start_epoch`, the Colab compatibility fix), the notebooks and the docs.
+All notebooks pull `master`. The old work branches `claude/nifty-ritchie-qpqakn` and
+`claude/clever-gauss-thkwoj` were merged in and are now historical; do not develop on them.
+
+`HANDOFF.md` is a dated record from the Phase A session (11 Nov) and still refers to the
+old branch. Treat it as history — **this file is authoritative.**
 
 ---
 
